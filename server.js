@@ -271,7 +271,7 @@ app.get("/", (req, res) => {
 });
 
 // Optional: Serve all routes to index.html (SPA)
-app.get("/*", (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
