@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Risk Scanner - Suraksha Network</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+    header { background: linear-gradient(90deg, #ff9933, #ffffff, #138808); padding: 15px; text-align: center; font-size: 22px; font-weight: bold; }
+    .container { padding: 20px; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    button { background: #138808; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #0e6606; }
+  </style>
+</head>
+<body>
+
+<header>🇮🇳 AI Risk Scanner</header>
+
+<div class="container">
+  <div class="card">
+    <h2>Upload Disaster Image</h2>
+    <input type="file" id="riskImage" accept="image/*" />
+    <button onclick="scanRisk()">Scan Now</button>
+    <p id="riskResult"></p>
+  </div>
+</div>
+
+<script>
+  function scanRisk() {
+    const results = [
+      "✅ Detected: Flood (Severity: High)",
+      "✅ Detected: Fire (Severity: Medium)",
+      "✅ Detected: Building Collapse (Severity: Critical)",
+      "✅ Detected: Landslide (Severity: Low)"
+    ];
+    const file = document.getElementById("riskImage").files[0];
+    if (!file) { alert("Please upload an image."); return; }
+
+    document.getElementById("riskResult").innerText = "🔍 Scanning...";
+    setTimeout(() => {
+      document.getElementById("riskResult").innerText = results[Math.floor(Math.random() * results.length)];
+    }, 1500);
+  }
+</script>
+
+</body>
+</html>

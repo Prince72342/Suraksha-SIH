@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Govt Authority</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body class="p-4">
+  <h2 class="text-center mb-3">🏛 Govt Authority Dashboard</h2>
+
+  <!-- Send Alert -->
+  <div class="card mb-4">
+    <div class="card-header bg-danger text-white">🚨 Send New Alert</div>
+    <div class="card-body">
+      <form id="alertForm">
+        <!-- District Dropdown -->
+        <label class="form-label">District</label>
+        <select id="district" class="form-control mb-2" required>
+          <option value="">-- Select District --</option>
+          <option>Amritsar</option>
+          <option>Ludhiana</option>
+          <option>Jalandhar</option>
+          <option>Patiala</option>
+          <option>Chandigarh</option>
+        </select>
+
+        <!-- Alert Type -->
+        <label class="form-label">Alert Type</label>
+        <select id="type" class="form-control mb-2" required>
+          <option value="flood">🌊 Flood</option>
+          <option value="cyclone">🌪 Storm / Cyclone</option>
+          <option value="earthquake">🌍 Earthquake</option>
+          <option value="heatwave">🔥 Heatwave</option>
+          <option value="default">⚠ General</option>
+        </select>
+
+        <!-- Message -->
+        <label class="form-label">Alert Message</label>
+        <input type="text" id="alert" class="form-control mb-2" placeholder="Alert message" required>
+
+        <!-- Severity -->
+        <label class="form-label">Severity</label>
+        <select id="severity" class="form-control mb-2">
+          <option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
+        </select>
+
+        <!-- Description -->
+        <label class="form-label">Description</label>
+        <textarea id="description" class="form-control mb-3" placeholder="Detailed description" required></textarea>
+
+        <button type="submit" class="btn btn-danger w-100">🚀 Send Alert</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirmation -->
+  <div id="statusMsg" class="alert d-none"></div>
+
+<script>
+const districtCoords = {
+  Amritsar: { lat: 31.634, lon: 74.873 },
+  Ludhiana: { lat: 30.9010, lon: 75.8573 },
+  Jalandhar: { lat: 31.3260, lon: 75.5762 },
+  Patiala: { lat: 30.3398, lon: 76.3869 },
+  Chandigarh: { lat: 30.7333, lon: 76.7794 }
+};
+
+document.getElementById("alertForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const district = document.getElementById("district").value;
+  const type = document.getElementById("type").value;
+  const alertMsg = document.getElementById("alert").value;
+  const severity = document.getElementById("severity").value;
+  const description = document.getElementById("description").value;
+
+  const coords = districtCoords[district];
+  if (!coords) {
+    alert("❌ Invalid district");
+    return;
+  }
+
+  const alertData = {
+    district,
+    alert: alertMsg,
+    severity,
+    description,
+    lat: coords.lat,
+    lon: coords.lon,
+    type,
+    issued_on: new Date().toLocaleString()
+  };
+
+  const res = await fetch("http://localhost:5000/api/alerts", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(alertData)
+  });
+
+  if (res.ok) {
+    document.getElementById("statusMsg").className = "alert alert-success";
+    document.getElementById("statusMsg").innerText = "✅ Alert sent successfully!";
+    document.getElementById("statusMsg").classList.remove("d-none");
+    document.getElementById("alertForm").reset();
+  } else {
+    document.getElementById("statusMsg").className = "alert alert-danger";
+    document.getElementById("statusMsg").innerText = "❌ Failed to send alert.";
+    document.getElementById("statusMsg").classList.remove("d-none");
+  }
+});
+</script>
+</body>
+</html>

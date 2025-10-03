@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Suraksha Network – Disaster Resilience</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+      body {
+        background-color: #fff8f0;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      /* Loading Screen */
+      #loadingScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff8f0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 2000;
+      }
+
+      /* Alert Banner */
+      #alertBanner {
+        background: linear-gradient(90deg, #ff9933, #ffffff, #138808);
+        color: #212529;
+        font-weight: bold;
+        padding: 8px;
+        text-align: center;
+        overflow: hidden;
+        white-space: nowrap;
+        cursor: pointer;
+        z-index: 1500;
+        position: relative;
+        border-bottom: 2px solid #138808;
+      }
+      #alertBanner span {
+        display: inline-block;
+        animation: scrollBanner 15s linear infinite;
+      }
+      @keyframes scrollBanner {
+        0% {
+          transform: translateX(100%);
+        }
+        100% {
+          transform: translateX(-100%);
+        }
+      }
+
+      /* Hero Section */
+      .hero {
+        background: linear-gradient(135deg, #ff9933, #138808);
+        color: #fff;
+        padding: 60px 20px;
+        margin-bottom: 40px;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      /* Feature Cards */
+      .feature-card {
+        transition: transform 0.2s, background 0.3s;
+        border-radius: 15px;
+        cursor: pointer;
+      }
+      .feature-card:hover {
+        transform: translateY(-5px);
+        background: #fffaf0;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Map & Alerts */
+      .alert-box {
+        max-height: 250px;
+        overflow-y: auto;
+        border: 2px solid #ff9933;
+        padding: 15px;
+        border-radius: 10px;
+        background: #fff8e1;
+      }
+      #map {
+        height: 500px;
+        border: 2px solid #138808;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+
+      /* Popup & Modals */
+      #modalOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2500;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .moduleModal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 400px;
+        max-height: 450px;
+        overflow-y: auto;
+        background: #fff8f0;
+        border: 2px solid #138808;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        padding: 20px;
+        z-index: 3000;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .moduleModal h5 {
+        color: #ff9933;
+        margin-bottom: 10px;
+      }
+      .moduleModal .closeBtn {
+        cursor: pointer;
+        color: #138808;
+        float: right;
+        font-weight: bold;
+      }
+
+      footer {
+        margin-top: 50px;
+        padding: 20px;
+        background: #138808;
+        color: #fff;
+        border-top: 4px solid #ff9933;
+        border-radius: 8px;
+      }
+
+      /* Button Theme */
+      .btn-primary {
+        background: #ff9933;
+        border: none;
+      }
+      .btn-primary:hover {
+        background: #ff7f00;
+      }
+      .btn-success {
+        background: #138808;
+        border: none;
+      }
+      .btn-success:hover {
+        background: #0b5c03;
+      }
+      .btn-danger {
+        background: #ff4500;
+        border: none;
+      }
+      .btn-danger:hover {
+        background: #e63e00;
+      }
+
+      .module-section {
+        margin-top: 40px;
+      }
+    </style>
+  </head>
+  <body class="p-4">
+    <!-- Loading -->
+    <div id="loadingScreen">
+      <div class="spinner-border text-primary mb-3" role="status"></div>
+      <h5>Loading Suraksha Network...</h5>
+    </div>
+
+    <!-- Alert Banner -->
+    <div id="alertBanner" onclick="showModuleModal('alerts')">
+      <span>🔔 No alerts yet...</span>
+    </div>
+
+    <!-- Hero -->
+    <section class="hero text-center">
+      <h1 class="mb-3">
+        🌍 Suraksha Network – Community-Powered Disaster Resilience
+      </h1>
+      <p class="lead">
+        Empowering citizens to act as Digital First Responders, even offline.
+      </p>
+    </section>
+
+    <!-- Top Row: Citizen | Area | Govt -->
+    <section class="container mb-4">
+      <div class="row g-4 justify-content-center align-items-center">
+        <!-- Citizen Dashboard Card -->
+        <div class="col-md-3 col-sm-6">
+          <div
+            class="card feature-card shadow-sm p-4 text-center h-100"
+            style="background: #fff3cd"
+          >
+            <div style="font-size: 2.5rem">👩‍🎓</div>
+            <h5 class="mt-2">Citizen Dashboard</h5>
+            <p>Access general awareness modules.</p>
+            <button
+              class="btn btn-primary mt-2"
+              onclick="window.location.href='citizen.html'"
+            >
+              Open Dashboard
+            </button>
+          </div>
+        </div>
+
+        <!-- Area Selector -->
+        <div class="col-md-3 col-sm-6 text-center">
+          <label for="areaSelect" class="form-label fw-bold d-block mb-2"
+            >Select Your Area:</label
+          >
+          <select id="areaSelect" class="form-select w-auto mx-auto">
+            <option value="">All India</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Mumbai">Mumbai</option>
+            <option value="Kolkata">Kolkata</option>
+            <option value="Chennai">Chennai</option>
+            <option value="Bengaluru">Bengaluru</option>
+            <option value="Hyderabad">Hyderabad</option>
+            <option value="Ahmedabad">Ahmedabad</option>
+            <option value="Lucknow">Lucknow</option>
+            <option value="Jaipur">Jaipur</option>
+          </select>
+        </div>
+
+        <!-- Government Dashboard Card -->
+        <div class="col-md-3 col-sm-6">
+          <div
+            class="card feature-card shadow-sm p-4 text-center h-100"
+            style="background: #d1ecf1"
+          >
+            <div style="font-size: 2.5rem">🏛️</div>
+            <h5 class="mt-2">Government Dashboard</h5>
+            <p>Access official disaster data, reports, and alerts.</p>
+            <button
+              class="btn btn-success mt-2"
+              onclick="window.location.href='govt.html'"
+            >
+              Open Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Modules -->
+    <section class="container text-center module-section">
+      <h2 class="mb-4">Core Modules</h2>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card feature-card shadow-sm p-3">
+            <h4>📸 AI Risk Scanning</h4>
+            <p>
+              Upload photos of disasters → AI classifies severity instantly.
+            </p>
+            <button class="btn btn-primary" onclick="showModuleModal('ai')">
+              Open AI Scanner
+            </button>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card feature-card shadow-sm p-3">
+            <h4>🌐 Offline Mesh</h4>
+            <p>Smartphones form a peer-to-peer mesh for SOS alerts.</p>
+            <button class="btn btn-success" onclick="showModuleModal('mesh')">
+              View Mesh
+            </button>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card feature-card shadow-sm p-3">
+            <h4>🏘 Hyperlocal Alerts</h4>
+            <p>Alerts sent to affected areas (500m–2km radius).</p>
+            <button class="btn btn-danger" onclick="showModuleModal('alerts')">
+              View Alerts
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Disaster Preparedness Modules -->
+    <section class="container text-center module-section">
+      <h2 class="mb-4">Disaster Preparedness Modules</h2>
+      <div class="row g-4 justify-content-center">
+        <div class="col-md-2 col-sm-6">
+          <div
+            class="card feature-card shadow-sm p-4 text-center h-100"
+            style="background: #ffe5b4"
+          >
+            <div style="font-size: 2.5rem">🏘</div>
+            <h5 class="mt-2">Available Shelters</h5>
+            <button
+              class="btn btn-primary mt-2"
+              onclick="showModuleModal('shelters')"
+            >
+              View
+            </button>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+          <div
+            class="card feature-card shadow-sm p-4 text-center h-100"
+            style="background: #d4edda"
+          >
+            <div style="font-size: 2.5rem">🤝</div>
+            <h5 class="mt-2">Active NGOs</h5>
+            <button
+              class="btn btn-success mt-2"
+              onclick="showModuleModal('ngos')"
+            >
+              View
+            </button>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+          <div
+            class="card feature-card shadow-sm p-4 text-center h-100"
+            style="background: #f8d7da"
+          >
+            <div style="font-size: 2.5rem">⚠</div>
+            <h5 class="mt-2">Risk Zones</h5>
+            <button
+              class="btn btn-danger mt-2"
+              onclick="showModuleModal('risk')"
+            >
+              View
+            </button>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+          <div
+            class="card feature-card shadow-sm p-4 text-center h-100"
+            style="background: #cce5ff"
+          >
+            <div style="font-size: 2.5rem">🚨</div>
+            <h5 class="mt-2">Simulated Alerts</h5>
+            <button
+              class="btn btn-primary mt-2"
+              onclick="showModuleModal('simulated')"
+            >
+              View
+            </button>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+          <div
+            class="card feature-card shadow-sm p-4 text-center h-100"
+            style="background: #fff3cd"
+          >
+            <div style="font-size: 2.5rem">🛡</div>
+            <h5 class="mt-2">Risk Mitigation & Planning</h5>
+            <button
+              class="btn btn-success mt-2"
+              onclick="showModuleModal('planning')"
+            >
+              View
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Map Section -->
+    <section class="container mt-5">
+      <h2 class="text-center mb-3">Live Map Overview</h2>
+      <div id="map"></div>
+    </section>
+
+    <!-- Modal Overlay -->
+    <div id="modalOverlay"></div>
+
+    <!-- Module Modal -->
+    <div id="moduleModal" class="moduleModal">
+      <span class="closeBtn" onclick="closeModuleModal()">×</span>
+      <h5 id="modalTitle"></h5>
+      <div id="modalContent"></div>
+    </div>
+
+    <footer class="text-center">
+      © 2025 Suraksha Network | Dr. HariSingh Gour University, Sagar, MP
+    </footer>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      const loadingScreen = document.getElementById("loadingScreen");
+      window.onload = () => {
+        setTimeout(() => {
+          loadingScreen.style.display = "none";
+        }, 1000);
+      };
+
+      const areaSelect = document.getElementById("areaSelect");
+      let selectedArea = "";
+      areaSelect.addEventListener("change", () => {
+        selectedArea = areaSelect.value;
+        updateMapMarkers();
+      });
+
+      const moduleModal = document.getElementById("moduleModal");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalContent = document.getElementById("modalContent");
+      const modalOverlay = document.getElementById("modalOverlay");
+
+      function showModuleModal(module) {
+        modalOverlay.style.display = "block";
+        modalOverlay.style.opacity = "1";
+        moduleModal.style.display = "block";
+        moduleModal.style.opacity = "1";
+
+        if (module === "ai") {
+          modalTitle.innerText = "📸 AI Risk Scanner";
+          modalContent.innerHTML = `
+            <p>Upload an image of your area to scan for disaster risk (mock AI).</p>
+            <input type="file" /><br/><br/>
+            <button class="btn btn-primary" onclick="alert('AI Scan Completed ✅')">Run Scan</button>
+          `;
+        } else if (module === "mesh") {
+          modalTitle.innerText = "🌐 Offline Mesh SOS Messages";
+          modalContent.innerHTML = `<p>Nearby SOS messages will appear here.</p>`;
+        } else if (module === "alerts") {
+          modalTitle.innerText = "🏘 Hyperlocal Alerts";
+          modalContent.innerHTML = `<p>Latest alerts in your area.</p>`;
+        } else if (module === "shelters") {
+          modalTitle.innerText = "✅ Available Shelters";
+          modalContent.innerHTML = `<p>All shelters in your selected area will appear here.</p>`;
+        } else if (module === "ngos") {
+          modalTitle.innerText = "✅ Active NGOs";
+          modalContent.innerHTML = `<p>All NGOs active in disaster response.</p>`;
+        } else if (module === "risk") {
+          modalTitle.innerText = "✅ Risk Zones";
+          let riskList = [];
+          for (const [district, coords] of Object.entries(districtCoords)) {
+            if (selectedArea && district !== selectedArea) continue;
+            riskList.push(`${district} - High Risk`);
+          }
+          modalContent.innerHTML = riskList.length
+            ? `<ul>${riskList.map((r) => `<li>${r}</li>`).join("")}</ul>`
+            : "<p>No risk zones in selected area.</p>";
+        } else if (module === "simulated") {
+          modalTitle.innerText = "✅ Simulated Alert Readiness";
+          modalContent.innerHTML = `<p>Simulation & training data to prepare for disasters.</p>`;
+        } else if (module === "planning") {
+          modalTitle.innerText = "🛡 Risk Mitigation & Planning";
+          modalContent.innerHTML = `
+            <p>Step-by-step guide for disaster preparedness:</p>
+            <ul>
+              <li><b>Before Disaster:</b> Prepare emergency kits, evacuation plans, keep important documents safe.</li>
+              <li><b>During Disaster:</b> Follow alerts, stay in safe zones, help neighbors.</li>
+              <li><b>After Disaster:</b> Access shelters, report damages, coordinate with NGOs and authorities.</li>
+            </ul>
+          `;
+        }
+      }
+
+      function closeModuleModal() {
+        moduleModal.style.opacity = "0";
+        modalOverlay.style.opacity = "0";
+        setTimeout(() => {
+          moduleModal.style.display = "none";
+          modalOverlay.style.display = "none";
+        }, 300);
+      }
+
+      // Initialize map
+      const map = L.map("map").setView([20.5937, 78.9629], 5);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(map);
+
+      const districtCoords = {
+        Delhi: [28.7041, 77.1025],
+        Mumbai: [19.076, 72.8777],
+        Kolkata: [22.5726, 88.3639],
+        Chennai: [13.0827, 80.2707],
+        Bengaluru: [12.9716, 77.5946],
+        Hyderabad: [17.385, 78.4867],
+        Ahmedabad: [23.0225, 72.5714],
+        Lucknow: [26.8467, 80.9462],
+        Jaipur: [26.9124, 75.7873],
+      };
+
+      let mapMarkers = [];
+
+      function updateMapMarkers() {
+        mapMarkers.forEach((m) => map.removeLayer(m));
+        mapMarkers = [];
+
+        for (const [district, coords] of Object.entries(districtCoords)) {
+          if (selectedArea && district !== selectedArea) continue;
+
+          // High Risk Zone
+          const riskMarker = L.circle(coords, {
+            color: "red",
+            fillColor: "#f03",
+            fillOpacity: 0.4,
+            radius: 20000,
+          })
+            .addTo(map)
+            .bindPopup(`${district} - High Risk Zone`);
+          mapMarkers.push(riskMarker);
+
+          // Shelter
+          const shelterMarker = L.marker([coords[0] + 0.02, coords[1] + 0.02])
+            .addTo(map)
+            .bindPopup(`${district} - Shelter`);
+          mapMarkers.push(shelterMarker);
+
+          // NGO
+          const ngoMarker = L.marker([coords[0] - 0.02, coords[1] - 0.02])
+            .addTo(map)
+            .bindPopup(`${district} - Active NGO`);
+          mapMarkers.push(ngoMarker);
+
+          // Simulated Alert
+          const alertMarker = L.marker([coords[0] + 0.03, coords[1] - 0.03])
+            .addTo(map)
+            .bindPopup(`${district} - Simulated Alert`);
+          mapMarkers.push(alertMarker);
+        }
+      }
+
+      updateMapMarkers();
+    </script>
+  </body>
+</html>

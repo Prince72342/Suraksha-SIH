@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hyperlocal Alerts - Suraksha Network</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+    header { background: linear-gradient(90deg, #ff9933, #ffffff, #138808); padding: 15px; text-align: center; font-size: 22px; font-weight: bold; }
+    .container { padding: 20px; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    button { background: #d32f2f; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #b71c1c; }
+    input { padding: 8px; width: 100%; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; }
+    .alert-item { background: #ffe5e5; padding: 10px; margin-top: 5px; border-left: 4px solid red; }
+  </style>
+</head>
+<body>
+
+<header>🇮🇳 Hyperlocal Alerts</header>
+
+<div class="container">
+  <div class="card">
+    <h2>Send Alert</h2>
+    <input type="text" id="alertMsg" placeholder="Enter alert message..." />
+    <input type="number" id="alertRadius" placeholder="Radius in meters (e.g., 500)" />
+    <button onclick="sendAlert()">Send</button>
+
+    <h3>Received Alerts</h3>
+    <div id="alertList"></div>
+  </div>
+</div>
+
+<script>
+  function sendAlert() {
+    const msg = document.getElementById("alertMsg").value;
+    const radius = document.getElementById("alertRadius").value;
+    if (!msg || !radius) { alert("Enter both fields."); return; }
+
+    const list = document.getElementById("alertList");
+    const div = document.createElement("div");
+    div.className = "alert-item";
+    div.innerText = `📢 ${msg} (Within ${radius}m)`;
+    list.appendChild(div);
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>General Awareness for Citizens</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        background-color: #fff8f0;
+        font-family: "Segoe UI", sans-serif;
+      }
+      .hero {
+        background: linear-gradient(135deg, #ff9933, #138808);
+        color: #fff;
+        padding: 40px 20px;
+        margin-bottom: 30px;
+        text-align: center;
+        border-radius: 12px;
+      }
+      .section-title {
+        color: #138808;
+        font-weight: bold;
+        margin-top: 30px;
+        margin-bottom: 20px;
+      }
+      .card {
+        border-radius: 12px;
+      }
+      .btn-primary {
+        background: #ff9933;
+        border: none;
+      }
+      .btn-primary:hover {
+        background: #ff7f00;
+      }
+      .btn-success {
+        background: #138808;
+        border: none;
+      }
+      .btn-success:hover {
+        background: #0b5c03;
+      }
+    </style>
+  </head>
+  <body class="p-4">
+    <!-- Hero Section -->
+    <div class="hero">
+      <h1>🌍 General Awareness for Citizens</h1>
+      <p>Learn how to stay safe and prepared during disasters</p>
+    </div>
+
+    <!-- Learning Material -->
+    <div class="container mb-4">
+      <h2 class="section-title">📘 Learning Material</h2>
+      <div id="contentList">Loading content...</div>
+    </div>
+
+    <!-- Quiz Section -->
+    <div class="container mb-4">
+      <h2 class="section-title">📚 Quiz</h2>
+      <form id="quizForm">
+        <ol>
+          <li>
+            During a flood, what should you do?<br />
+            <input type="radio" name="q1" value="Safe" /> Move to higher
+            ground<br />
+            <input type="radio" name="q1" value="Unsafe" /> Stay near rivers
+          </li>
+          <li>
+            During an earthquake, the safest action is:<br />
+            <input type="radio" name="q2" value="Safe" /> Drop, Cover, Hold
+            On<br />
+            <input type="radio" name="q2" value="Unsafe" /> Run outside
+            immediately
+          </li>
+          <li>
+            What should you store for emergencies?<br />
+            <input type="radio" name="q3" value="Safe" /> Water, food, first aid
+            kit<br />
+            <input type="radio" name="q3" value="Unsafe" /> Only clothes
+          </li>
+          <li>
+            If a fire breaks out, you should:<br />
+            <input type="radio" name="q4" value="Safe" /> Use stairs<br />
+            <input type="radio" name="q4" value="Unsafe" /> Take elevator
+          </li>
+          <li>
+            Emergency number in India?<br />
+            <input type="radio" name="q5" value="Safe" /> 112<br />
+            <input type="radio" name="q5" value="Unsafe" /> 911
+          </li>
+        </ol>
+        <button type="submit" class="btn btn-success mt-2">Submit Quiz</button>
+      </form>
+      <p id="quizResult" class="mt-2"></p>
+    </div>
+
+    <!-- Certificates Section -->
+    <div class="container mb-4">
+      <h2 class="section-title">🎓 Certificates</h2>
+      <button class="btn btn-primary mb-2" onclick="getCertificates()">
+        View My Certificates
+      </button>
+      <div id="certificatesList"></div>
+    </div>
+
+    <script>
+      // ---------------- Load Learning Material ----------------
+      async function loadContent() {
+        const res = await fetch("http://localhost:5000/api/content"); // Replace with your API
+        const data = await res.json();
+
+        if (data.length === 0) {
+          document.getElementById("contentList").innerHTML =
+            "<p>No content available.</p>";
+          return;
+        }
+
+        document.getElementById("contentList").innerHTML = data
+          .map(
+            (c) => `
+      <div class="card mb-2 shadow-sm p-3">
+        <h5>${c.title}</h5>
+        <p>${c.description}</p>
+        ${
+          c.link
+            ? `<a href="${c.link}" target="_blank" class="btn btn-sm btn-primary">Open Resource</a>`
+            : ""
+        }
+        <p class="text-muted small mt-1">📅 Assigned on: ${c.issued_on}</p>
+      </div>
+    `
+          )
+          .join("");
+      }
+      loadContent();
+
+      // ---------------- Quiz Submission ----------------
+      document
+        .getElementById("quizForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          let score = 0;
+          for (let i = 1; i <= 5; i++) {
+            const ans = document.querySelector(`input[name='q${i}']:checked`);
+            if (ans && ans.value === "Safe") score++;
+          }
+          let result = `You scored ${score}/5. `;
+          if (score >= 3) {
+            result += "🎉 Congratulations! You passed.";
+            // Optionally, save certificate
+            await fetch("http://localhost:5000/api/certificates", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                student: "Citizen",
+                course: "General Disaster Awareness",
+              }),
+            });
+          } else {
+            result += "⚠️ Try again to score at least 3.";
+          }
+          document.getElementById("quizResult").innerText = result;
+        });
+
+      // ---------------- Certificates ----------------
+      async function getCertificates() {
+        const res = await fetch("http://localhost:5000/api/certificates"); // Replace with your API
+        const data = await res.json();
+        document.getElementById("certificatesList").innerHTML = data
+          .map(
+            (c) => `<p>${c.student} - ${c.course} (Issued: ${c.issued_on})</p>`
+          )
+          .join("");
+      }
+    </script>
+  </body>
+</html>
