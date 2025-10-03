@@ -1,32 +1,48 @@
-// server.js
 require("dotenv").config(); // load .env variables
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ObjectId } = require("mongodb");
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+const mongoose = require("mongoose");
+const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ---------------- MongoDB Setup ----------------
-const mongoUri =
-  process.env.MONGO_URI ||
-  "mongodb+srv://Prince:Rajput72342@suraksha-cluster.qgyfrro.mongodb.net/?retryWrites=true&w=majority";
-const client = new MongoClient(mongoUri);
-let db, alertsCollection, meshSOSCollection;
+// ---------------- MongoDB Setup (Mongoose) ----------------
+const mongoUri = process.env.MONGO_URI;
+mongoose
+  .connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-async function connectDB() {
-  await client.connect();
-  db = client.db("suraksha"); // database name
-  alertsCollection = db.collection("alerts");
-  meshSOSCollection = db.collection("mesh_sos");
-  console.log("✅ MongoDB connected!");
-}
-connectDB().catch(console.error);
+// ---------------- Schemas ----------------
+const alertSchema = new mongoose.Schema({
+  district: String,
+  alert: String,
+  severity: String,
+  description: String,
+  lat: Number,
+  lon: Number,
+  type: String,
+  issued_on: { type: Date, default: Date.now },
+  _source: String,
+});
 
-// ---------------- Helper: Haversine Distance (km) ----------------
+const meshSOSSchema = new mongoose.Schema({
+  senderId: String,
+  msg: String,
+  lat: Number,
+  lon: Number,
+  ts: { type: Date, default: Date.now },
+});
+
+const Alert = mongoose.model("Alert", alertSchema);
+const MeshSOS = mongoose.model("MeshSOS", meshSOSSchema);
+
+// ---------------- Helper: Haversine Distance ----------------
 function haversineKm(lat1, lon1, lat2, lon2) {
   const toRad = (deg) => (deg * Math.PI) / 180;
   const R = 6371; // km
@@ -38,7 +54,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * d;
 }
 
-// ---------------- Curated District/City Coordinates ----------------
+// ---------------- District Coordinates ----------------
 const districtCoords = {
   Delhi: { lat: 28.7041, lon: 77.1025 },
   Mumbai: { lat: 19.076, lon: 72.8777 },
@@ -56,7 +72,7 @@ const districtCoords = {
 app.get("/api/alerts", async (req, res) => {
   try {
     const { lat, lon, radius } = req.query;
-    let allAlerts = await alertsCollection.find({}).toArray();
+    let allAlerts = await Alert.find().lean();
 
     if (lat && lon && radius) {
       const latNum = parseFloat(lat);
@@ -64,10 +80,7 @@ app.get("/api/alerts", async (req, res) => {
       const radiusNum = parseFloat(radius);
 
       allAlerts = allAlerts.filter(
-        (a) =>
-          a.lat &&
-          a.lon &&
-          haversineKm(latNum, lonNum, a.lat, a.lon) <= radiusNum
+        (a) => a.lat && a.lon && haversineKm(latNum, lonNum, a.lat, a.lon) <= radiusNum
       );
     }
 
@@ -79,16 +92,14 @@ app.get("/api/alerts", async (req, res) => {
   }
 });
 
-// ---------------- Add manual alert ----------------
+// ---------------- Add Manual Alert ----------------
 app.post("/api/alerts", async (req, res) => {
   try {
     const { district, alert, severity, description, lat, lon, type } = req.body;
     if (!district || !alert || !severity)
-      return res
-        .status(400)
-        .json({ message: "district, alert, and severity required" });
+      return res.status(400).json({ message: "district, alert, and severity required" });
 
-    const newAlert = {
+    const newAlert = new Alert({
       district,
       alert,
       severity,
@@ -96,11 +107,10 @@ app.post("/api/alerts", async (req, res) => {
       lat: lat || null,
       lon: lon || null,
       type: type || "default",
-      issued_on: new Date().toISOString(),
       _source: "manual",
-    };
+    });
 
-    const result = await alertsCollection.insertOne(newAlert);
+    await newAlert.save();
     res.json({ message: "✅ Govt Alert added", alert: newAlert });
   } catch (err) {
     console.error(err);
@@ -112,8 +122,7 @@ app.post("/api/alerts", async (req, res) => {
 app.post("/api/ai-scan", async (req, res) => {
   try {
     const { imageBase64, lat, lon, reporter } = req.body;
-    if (!imageBase64)
-      return res.status(400).json({ message: "imageBase64 required" });
+    if (!imageBase64) return res.status(400).json({ message: "imageBase64 required" });
 
     const severityRoll = Math.random();
     let severity = "Low";
@@ -124,46 +133,33 @@ app.post("/api/ai-scan", async (req, res) => {
     const types = ["structural", "fire", "flood", "landslide", "other"];
     const detectedType = types[Math.floor(Math.random() * types.length)];
 
-    const aiAlert = {
+    const aiAlert = new Alert({
       district: "Unknown",
       alert: `AI Scan: ${detectedType} detected`,
       severity,
-      description: `AI-scanned image suggests ${detectedType}. Reporter: ${
-        reporter || "anonymous"
-      }`,
+      description: `AI-scanned image suggests ${detectedType}. Reporter: ${reporter || "anonymous"}`,
       lat: lat || null,
       lon: lon || null,
       type: detectedType,
-      issued_on: new Date().toISOString(),
       _source: "ai-scan",
-    };
-
-    await alertsCollection.insertOne(aiAlert);
-    res.json({
-      message: "✅ AI analysis complete",
-      result: { severity, detectedType, aiAlert },
     });
+
+    await aiAlert.save();
+    res.json({ message: "✅ AI analysis complete", result: { severity, detectedType, aiAlert } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "❌ AI scan error" });
   }
 });
 
-// ---------------- Offline Mesh SOS ----------------
+// ---------------- Mesh SOS ----------------
 app.post("/api/mesh/sos", async (req, res) => {
   try {
     const { senderId, lat, lon, msg } = req.body;
-    if (!senderId || !msg)
-      return res.status(400).json({ message: "senderId and msg required" });
+    if (!senderId || !msg) return res.status(400).json({ message: "senderId and msg required" });
 
-    const record = {
-      senderId,
-      msg,
-      lat: lat || null,
-      lon: lon || null,
-      ts: new Date().toISOString(),
-    };
-    await meshSOSCollection.insertOne(record);
+    const record = new MeshSOS({ senderId, lat: lat || null, lon: lon || null, msg });
+    await record.save();
     res.json({ message: "📡 SOS stored for mesh sync", record });
   } catch (err) {
     console.error(err);
@@ -174,7 +170,7 @@ app.post("/api/mesh/sos", async (req, res) => {
 app.get("/api/mesh/sos", async (req, res) => {
   try {
     const { lat, lon, radius } = req.query;
-    let sosList = await meshSOSCollection.find({}).toArray();
+    let sosList = await MeshSOS.find().lean();
 
     if (lat && lon && radius) {
       const latNum = parseFloat(lat);
@@ -182,10 +178,7 @@ app.get("/api/mesh/sos", async (req, res) => {
       const radiusNum = parseFloat(radius);
 
       sosList = sosList.filter(
-        (s) =>
-          s.lat &&
-          s.lon &&
-          haversineKm(latNum, lonNum, s.lat, s.lon) <= radiusNum
+        (s) => s.lat && s.lon && haversineKm(latNum, lonNum, s.lat, s.lon) <= radiusNum
       );
     }
 
@@ -196,14 +189,12 @@ app.get("/api/mesh/sos", async (req, res) => {
   }
 });
 
-// ---------------- Fetch Live Weather Alerts ----------------
+// ---------------- Weather Alerts ----------------
 async function fetchWeatherAlerts() {
   try {
     const apiKey = process.env.OPENWEATHER_API_KEY;
     if (!apiKey) {
-      console.warn(
-        "⚠️ OPENWEATHER_API_KEY not set in .env, skipping weather fetch."
-      );
+      console.warn("⚠️ OPENWEATHER_API_KEY not set, skipping weather fetch.");
       return;
     }
 
@@ -220,14 +211,14 @@ async function fetchWeatherAlerts() {
               ? "cyclone"
               : "default";
 
-            await alertsCollection.updateOne(
+            await Alert.updateOne(
               { alert: a.event, district, _source: "openweather" },
               {
                 $set: {
                   district,
                   alert: a.event,
                   type,
-                  issued_on: new Date(a.start * 1000).toISOString(),
+                  issued_on: new Date(a.start * 1000),
                   severity: a.tags?.join(", ") || "General",
                   description: a.description || "No description",
                   lat: coords.lat,
@@ -240,10 +231,7 @@ async function fetchWeatherAlerts() {
           }
         }
       } catch (err) {
-        console.error(
-          `❌ Error fetching OpenWeather alerts for ${district}:`,
-          err.message || err
-        );
+        console.error(`❌ Error fetching OpenWeather for ${district}:`, err.message || err);
       }
     }
   } catch (err) {
@@ -257,6 +245,4 @@ setInterval(fetchWeatherAlerts, 5 * 60 * 1000);
 
 // ---------------- Start Server ----------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Suraksha server running at http://localhost:${PORT}`)
-);
+app.listen(PORT, () => console.log(`🚀 Suraksha server running at http://localhost:${PORT}`));
