@@ -2,7 +2,9 @@ require("dotenv").config(); // load .env variables
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
+const path = require("path");
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 app.use(cors());
@@ -11,10 +13,7 @@ app.use(express.json());
 // ---------------- MongoDB Setup (Mongoose) ----------------
 const mongoUri = process.env.MONGO_URI;
 mongoose
-  .connect(mongoUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
@@ -80,7 +79,10 @@ app.get("/api/alerts", async (req, res) => {
       const radiusNum = parseFloat(radius);
 
       allAlerts = allAlerts.filter(
-        (a) => a.lat && a.lon && haversineKm(latNum, lonNum, a.lat, a.lon) <= radiusNum
+        (a) =>
+          a.lat &&
+          a.lon &&
+          haversineKm(latNum, lonNum, a.lat, a.lon) <= radiusNum
       );
     }
 
@@ -97,7 +99,9 @@ app.post("/api/alerts", async (req, res) => {
   try {
     const { district, alert, severity, description, lat, lon, type } = req.body;
     if (!district || !alert || !severity)
-      return res.status(400).json({ message: "district, alert, and severity required" });
+      return res
+        .status(400)
+        .json({ message: "district, alert, and severity required" });
 
     const newAlert = new Alert({
       district,
@@ -122,7 +126,8 @@ app.post("/api/alerts", async (req, res) => {
 app.post("/api/ai-scan", async (req, res) => {
   try {
     const { imageBase64, lat, lon, reporter } = req.body;
-    if (!imageBase64) return res.status(400).json({ message: "imageBase64 required" });
+    if (!imageBase64)
+      return res.status(400).json({ message: "imageBase64 required" });
 
     const severityRoll = Math.random();
     let severity = "Low";
@@ -137,7 +142,9 @@ app.post("/api/ai-scan", async (req, res) => {
       district: "Unknown",
       alert: `AI Scan: ${detectedType} detected`,
       severity,
-      description: `AI-scanned image suggests ${detectedType}. Reporter: ${reporter || "anonymous"}`,
+      description: `AI-scanned image suggests ${detectedType}. Reporter: ${
+        reporter || "anonymous"
+      }`,
       lat: lat || null,
       lon: lon || null,
       type: detectedType,
@@ -145,7 +152,10 @@ app.post("/api/ai-scan", async (req, res) => {
     });
 
     await aiAlert.save();
-    res.json({ message: "✅ AI analysis complete", result: { severity, detectedType, aiAlert } });
+    res.json({
+      message: "✅ AI analysis complete",
+      result: { severity, detectedType, aiAlert },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "❌ AI scan error" });
@@ -156,9 +166,15 @@ app.post("/api/ai-scan", async (req, res) => {
 app.post("/api/mesh/sos", async (req, res) => {
   try {
     const { senderId, lat, lon, msg } = req.body;
-    if (!senderId || !msg) return res.status(400).json({ message: "senderId and msg required" });
+    if (!senderId || !msg)
+      return res.status(400).json({ message: "senderId and msg required" });
 
-    const record = new MeshSOS({ senderId, lat: lat || null, lon: lon || null, msg });
+    const record = new MeshSOS({
+      senderId,
+      lat: lat || null,
+      lon: lon || null,
+      msg,
+    });
     await record.save();
     res.json({ message: "📡 SOS stored for mesh sync", record });
   } catch (err) {
@@ -178,7 +194,10 @@ app.get("/api/mesh/sos", async (req, res) => {
       const radiusNum = parseFloat(radius);
 
       sosList = sosList.filter(
-        (s) => s.lat && s.lon && haversineKm(latNum, lonNum, s.lat, s.lon) <= radiusNum
+        (s) =>
+          s.lat &&
+          s.lon &&
+          haversineKm(latNum, lonNum, s.lat, s.lon) <= radiusNum
       );
     }
 
@@ -231,7 +250,10 @@ async function fetchWeatherAlerts() {
           }
         }
       } catch (err) {
-        console.error(`❌ Error fetching OpenWeather for ${district}:`, err.message || err);
+        console.error(
+          `❌ Error fetching OpenWeather for ${district}:`,
+          err.message || err
+        );
       }
     }
   } catch (err) {
@@ -243,6 +265,11 @@ async function fetchWeatherAlerts() {
 fetchWeatherAlerts();
 setInterval(fetchWeatherAlerts, 5 * 60 * 1000);
 
-// ---------------- Start Server ----------------
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Suraksha server running at http://localhost:${PORT}`));
+// ---------------- Serve HTML ----------------
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// Optional: Serve all routes to index.html (SPA)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "inde
