@@ -272,4 +272,11 @@ app.get("/", (req, res) => {
 
 // Optional: Serve all routes to index.html (SPA)
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "inde
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// ---------------- Start Server ----------------
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =>
+  console.log(`🚀 Suraksha server running at http://localhost:${PORT}`)
+);
